@@ -5,6 +5,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=SFML_INCLUDE_DIR");
     println!("cargo:rerun-if-env-changed=SFML_LIBS_DIR");
     println!("cargo:rerun-if-env-changed=SFML_STATIC");
+    println!("cargo:rerun-if-env-changed=SFML_STDCPP_STATIC");
     let mut build = cc::Build::new();
     build
         .cpp(true)
@@ -22,6 +23,12 @@ fn main() {
     if static_linking {
         println!("cargo:warning=Linking SFML statically");
         build.define("SFML_STATIC", None).static_crt(true);
+        if let Ok(stdcpp_dirs) = env::var("SFML_STDCPP_STATIC") {
+            println!("cargo:warning=Linking stdc++ statically");
+            println!("cargo:rustc-link-search=native={stdcpp_dirs}");
+            build.cpp_link_stdlib(None);
+            println!("cargo:rustc-link-lib=static=stdc++");
+        }
     }
     let feat_audio = env::var("CARGO_FEATURE_AUDIO").is_ok();
     let feat_window = env::var("CARGO_FEATURE_WINDOW").is_ok();
