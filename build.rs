@@ -1,4 +1,6 @@
 use std::env;
+use std::path::PathBuf;
+use std::process::Command;
 
 fn static_link_windows(feat_window: bool, feat_audio: bool, feat_graphics: bool) {
     println!("cargo:rustc-link-lib=dylib=winmm");
@@ -64,10 +66,15 @@ fn main() {
     if static_linking {
         println!("cargo:warning=Linking SFML statically");
         build.define("SFML_STATIC", None).static_crt(true);
-        if let Ok(stdcpp_dirs) = env::var("SFML_STDCPP_STATIC") {
+        if env::var("SFML_STDCPP_STATIC").is_ok() {
             println!("cargo:warning=Linking stdc++ statically");
-            println!("cargo:rustc-link-search=native={stdcpp_dirs}");
-            build.cpp_link_stdlib(None);
+            let compiler_path = build.get_compiler();
+            let stdcpp_a_path = Command::new(compiler_path.path()).arg("-print-file-name=libstdc++.a").output().expect("Could not run stdc++ static dir command");
+            let mut stdlibs_dir = PathBuf::from(String::from_utf8(stdcpp_a_path.stdout).expect("static stdlibs dir"));
+            stdlibs_dir.pop();
+            let stdlibs_dir_str = stdlibs_dir.to_string_lossy();
+            println!("cargo:warning=Using {stdlibs_dir_str} as stdlibs path");
+            println!("cargo:rustc-link-search=native={stdlibs_dir_str}/");
             println!("cargo:rustc-link-lib=static=stdc++");
         }
     }
@@ -185,4 +192,49 @@ fn main() {
             println!("cargo:rustc-link-lib=dylib=sfml-graphics");
         }
     }
+<<<<<<< HEAD
+=======
+
+    #[cfg(windows)]
+    if static_linking {
+        println!("cargo:rustc-link-lib=dylib=winmm");
+        println!("cargo:rustc-link-lib=dylib=user32");
+        if feat_window {
+            println!("cargo:rustc-link-lib=dylib=opengl32");
+            println!("cargo:rustc-link-lib=dylib=gdi32");
+        }
+        if feat_graphics {
+            println!("cargo:rustc-link-lib=static=freetype");
+        }
+        if feat_audio {
+            println!("cargo:rustc-link-lib=static=openal32");
+            println!("cargo:rustc-link-lib=static=flac");
+            println!("cargo:rustc-link-lib=static=vorbisenc");
+            println!("cargo:rustc-link-lib=static=vorbisfile");
+            println!("cargo:rustc-link-lib=static=vorbis");
+            println!("cargo:rustc-link-lib=static=ogg");
+        }
+    }
+
+    #[cfg(all(unix, target_os = "linux"))]
+    if static_linking {
+        println!("cargo:rustc-link-lib=dylib=udev");
+        if feat_window {
+            println!("cargo:rustc-link-lib=dylib=GL");
+            println!("cargo:rustc-link-lib=dylib=X11");
+            println!("cargo:rustc-link-lib=dylib=Xcursor");
+            println!("cargo:rustc-link-lib=dylib=Xrandr");
+        }
+        if feat_graphics {
+            println!("cargo:rustc-link-lib=dylib=freetype");
+        }
+        if feat_audio {
+            println!("cargo:rustc-link-lib=static=FLAC");
+            println!("cargo:rustc-link-lib=static=vorbisenc");
+            println!("cargo:rustc-link-lib=static=vorbisfile");
+            println!("cargo:rustc-link-lib=static=vorbis");
+            println!("cargo:rustc-link-lib=static=ogg");
+        }
+    }
+>>>>>>> feat/allow-statically-linking-cpp
 }
