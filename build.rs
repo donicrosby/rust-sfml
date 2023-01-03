@@ -1,4 +1,6 @@
 use std::env;
+use std::path::PathBuf;
+use std::process::Command;
 
 fn main() {
     println!("cargo:rerun-if-changed=CSFML");
@@ -23,10 +25,15 @@ fn main() {
     if static_linking {
         println!("cargo:warning=Linking SFML statically");
         build.define("SFML_STATIC", None).static_crt(true);
-        if let Ok(stdcpp_dirs) = env::var("SFML_STDCPP_STATIC") {
+        if env::var("SFML_STDCPP_STATIC").is_ok() {
             println!("cargo:warning=Linking stdc++ statically");
-            println!("cargo:rustc-link-search=native={stdcpp_dirs}");
-            build.cpp_link_stdlib(None);
+            let compiler_path = build.get_compiler();
+            let stdcpp_a_path = Command::new(compiler_path.path()).arg("-print-file-name=libstdc++.a").output().expect("Could not run stdc++ static dir command");
+            let mut stdlibs_dir = PathBuf::from(String::from_utf8(stdcpp_a_path.stdout).expect("static stdlibs dir"));
+            stdlibs_dir.pop();
+            let stdlibs_dir_str = stdlibs_dir.to_string_lossy();
+            println!("cargo:warning=Using {stdlibs_dir_str} as stdlibs path");
+            println!("cargo:rustc-link-search=native={stdlibs_dir_str}/");
             println!("cargo:rustc-link-lib=static=stdc++");
         }
     }
@@ -168,8 +175,7 @@ fn main() {
             println!("cargo:rustc-link-lib=dylib=freetype");
         }
         if feat_audio {
-            println!("cargo:rustc-link-lib=static=openal32");
-            println!("cargo:rustc-link-lib=static=flac");
+            println!("cargo:rustc-link-lib=static=FLAC");
             println!("cargo:rustc-link-lib=static=vorbisenc");
             println!("cargo:rustc-link-lib=static=vorbisfile");
             println!("cargo:rustc-link-lib=static=vorbis");
