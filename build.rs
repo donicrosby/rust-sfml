@@ -65,8 +65,9 @@ fn main() {
     let static_linking = env::var("SFML_STATIC").is_ok();
     if static_linking {
         println!("cargo:warning=Linking SFML statically");
-        build.define("SFML_STATIC", None).static_crt(true);
+        build.define("SFML_STATIC", None).static_crt(true).static_flag(true);
         if env::var("SFML_STDCPP_STATIC").is_ok() {
+            build.flag_if_supported("-static-libstdc++");
             println!("cargo:warning=Linking stdc++ statically");
             let compiler_path = build.get_compiler();
             let stdcpp_a_path = Command::new(compiler_path.path()).arg("-print-file-name=libstdc++.a").output().expect("Could not run stdc++ static dir command");
